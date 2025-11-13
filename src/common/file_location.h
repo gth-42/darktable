@@ -33,12 +33,15 @@ G_BEGIN_DECLS
 gchar *dt_loc_get_home_dir(const gchar *user);
 
 // Init all dirs
+// applicationdir: if NULL, auto-detect via /proc/self/exe (whereami)
+//                 if provided, bypass auto-detection (useful for shared library usage)
 uint8_t dt_loc_init(const char *datadir,
                     const char *moduledir,
                     const char *localedir,
                     const char *configdir,
                     const char *cachedir,
-                    const char *tmpdir);
+                    const char *tmpdir,
+                    const char *applicationdir);
 
 // Init systemwide data dir
 void dt_loc_init_datadir(const char *application_directory,

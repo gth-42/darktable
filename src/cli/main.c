@@ -646,6 +646,90 @@ static int cli_export_images(GList *id_list, dt_imageio_module_storage_t *storag
   return export_errors;
 }
 
+// Phase 1 cffi wrapper: Simple single-image processing function.
+// Returns 0 on success, non-zero on error.
+int dt_cli_process_simple(const char *input_path, const char *output_path, int width, int height)
+{
+  // Minimal init args for darktable
+  char *init_argv[] = { "darktable-cli", "--library", ":memory:", "--conf", "write_sidecar_files=never", NULL };
+  int init_argc = 5;
+
+  // Initialize darktable
+  if(dt_init(init_argc, init_argv, FALSE, TRUE, NULL, NULL)) // NULL applicationdir = auto-detect
+  {
+    fprintf(stderr, "dt_cli_process_simple: failed to initialize darktable\n");
+    return 1;
+  }
+
+  // Import the image
+  gchar *directory = g_path_get_dirname(input_path);
+  dt_film_t film;
+  dt_filmid_t filmid = dt_film_new(&film, directory);
+  g_free(directory);
+
+  if(!dt_is_valid_filmid(filmid))
+  {
+    fprintf(stderr, "dt_cli_process_simple: failed to create film for input\n");
+    dt_cleanup();
+    return 2;
+  }
+
+  const dt_imgid_t imgid = dt_image_import(filmid, input_path, TRUE, TRUE);
+  if(!dt_is_valid_imgid(imgid))
+  {
+    fprintf(stderr, "dt_cli_process_simple: failed to import image\n");
+    dt_cleanup();
+    return 3;
+  }
+
+  // Setup export modules (default to JPEG)
+  dt_imageio_module_format_t *format = dt_imageio_get_format_by_name("jpeg");
+  dt_imageio_module_storage_t *storage = dt_imageio_get_storage_by_name("disk");
+
+  if(!format || !storage)
+  {
+    fprintf(stderr, "dt_cli_process_simple: failed to get format/storage modules\n");
+    dt_cleanup();
+    return 4;
+  }
+
+  dt_imageio_module_data_t *sdata = storage->get_params(storage);
+  dt_imageio_module_data_t *fdata = format->get_params(format);
+
+  if(!sdata || !fdata)
+  {
+    fprintf(stderr, "dt_cli_process_simple: failed to get module params\n");
+    if(sdata) storage->free_params(storage, sdata);
+    if(fdata) format->free_params(format, fdata);
+    dt_cleanup();
+    return 5;
+  }
+
+  // Configure output
+  gchar *output_without_ext = g_strdup(output_path);
+  gchar *last_dot = strrchr(output_without_ext, '.');
+  if(last_dot) *last_dot = '\0';
+  g_strlcpy((char *)sdata, output_without_ext, DT_MAX_PATH_FOR_PARAMS);
+  g_free(output_without_ext);
+
+  fdata->max_width = width;
+  fdata->max_height = height;
+
+  // Export the image
+  GList *id_list = g_list_append(NULL, GINT_TO_POINTER(imgid));
+  int errors = cli_export_images(id_list, storage, sdata, format, fdata, TRUE, FALSE, FALSE,
+                                  DT_COLORSPACE_SRGB, NULL, DT_INTENT_PERCEPTUAL, 1);
+  g_list_free(id_list);
+
+  // Cleanup
+  if(storage->finalize_store) storage->finalize_store(storage, sdata);
+  storage->free_params(storage, sdata);
+  format->free_params(format, fdata);
+  dt_cleanup();
+
+  return errors;
+}
+
 // Shamelessly copied from src/main.c
 #ifdef __APPLE__
 int apple_main(int argc, char *argv[])
@@ -658,7 +742,7 @@ int main(const int argc, char *const restrict argv[])
 #endif
 
   // Locale defaults.
-  dt_loc_init(NULL, NULL, NULL, NULL, NULL, NULL);
+  dt_loc_init(NULL, NULL, NULL, NULL, NULL, NULL, NULL); // NULL applicationdir = auto-detect
   char localedir[PATH_MAX] = { 0 };
   dt_loc_get_localedir(localedir, sizeof(localedir));
   bindtextdomain(GETTEXT_PACKAGE, localedir);
@@ -715,7 +799,7 @@ int main(const int argc, char *const restrict argv[])
 
   // Darktable init.  Needed here since we use DT for input validation.
   // TODO: update test battery to verify --apply-custom-presets functionality.
-  if(dt_init(core_args_argc, core_args_argv, FALSE, config.apply_custom_presets, NULL))
+  if(dt_init(core_args_argc, core_args_argv, FALSE, config.apply_custom_presets, NULL, NULL)) // NULL applicationdir = auto-detect
   {
     fprintf(stderr, "Error: failed to initialize darktable\n");
     exit(1);

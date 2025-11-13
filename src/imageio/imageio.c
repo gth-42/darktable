@@ -1599,6 +1599,15 @@ dt_imageio_retval_t dt_imageio_open(dt_image_t *img,
                                     const char *filename,
                                     dt_mipmap_buffer_t *buf)
 {
+  /* Check for buffer-based loading first */
+  // TODO: Temporary hack - buffer check added directly to dt_imageio_open()
+  // Consider: separate dt_imageio_open_from_buffer() dispatcher or loader plugin system
+  if(img->raw_buffer && img->raw_buffer_size > 0)
+  {
+    dt_print(DT_DEBUG_PIPE, "[dt_imageio_open] using buffer-based loading (%zu bytes)", img->raw_buffer_size);
+    return dt_imageio_open_rawspeed_from_buffer(img, img->raw_buffer, img->raw_buffer_size, buf);
+  }
+
   /* first of all, check if file exists, don't bother to test loading
    * if not exists */
   if(!g_file_test(filename, G_FILE_TEST_IS_REGULAR))

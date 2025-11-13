@@ -222,7 +222,8 @@ static int load_from_lua(lua_State *L)
   argv[argc] = NULL;
   argv_copy[argc] = NULL;
   gtk_init(&argc, &argv);
-  if(dt_init(argc, argv, FALSE, TRUE, L)) {
+  if(dt_init(argc, argv, FALSE, TRUE, L, NULL)) // NULL applicationdir = auto-detect
+  {
     luaL_error(L,"Starting darktable failed.");
   }
   for(int i = 0; i < argc; i++)

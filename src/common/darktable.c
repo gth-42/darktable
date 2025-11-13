@@ -872,7 +872,7 @@ char *version = g_strdup_printf(
   return version;
 }
 
-int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load_data, lua_State *L)
+int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load_data, lua_State *L, const char *applicationdir)
 {
   double start_wtime = dt_get_wtime();
 
@@ -1382,7 +1382,8 @@ int dt_init(int argc, char *argv[], const gboolean init_gui, const gboolean load
                                               localedir_from_command,
                                               configdir_from_command,
                                               cachedir_from_command,
-                                              tmpdir_from_command);
+                                              tmpdir_from_command,
+                                              applicationdir); // Pass through from dt_init parameter
 
   dt_print_mem_usage("at startup");
 

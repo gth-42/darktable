@@ -148,7 +148,7 @@ int main(int argc, char *arg[])
 #endif
 
   // get valid locale dir
-  dt_loc_init(NULL, NULL, NULL, NULL, NULL, NULL);
+  dt_loc_init(NULL, NULL, NULL, NULL, NULL, NULL, NULL); // NULL applicationdir = auto-detect
   char localedir[PATH_MAX] = { 0 };
   dt_loc_get_localedir(localedir, sizeof(localedir));
   bindtextdomain(GETTEXT_PACKAGE, localedir);
@@ -215,7 +215,7 @@ int main(int argc, char *arg[])
   m_arg[m_argc] = NULL;
 
   // init dt without gui:
-  if(dt_init(m_argc, m_arg, FALSE, TRUE, NULL))
+  if(dt_init(m_argc, m_arg, FALSE, TRUE, NULL, NULL)) // NULL applicationdir = auto-detect
   {
     free(m_arg);
     exit(EXIT_FAILURE);

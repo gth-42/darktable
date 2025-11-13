@@ -356,6 +356,12 @@ typedef struct dt_image_t
 
   /* result of attempting to load the image, needed to be able to report why the image can't be displayed */
   dt_imageio_retval_t load_status;
+
+  /* Buffer-based loading support (for pre-loaded raw data) */
+  // TODO: This is a temporary hack for buffer-based input.
+  // Consider: separate buffer management system or loader plugin architecture
+  const uint8_t *raw_buffer;      // Pre-loaded raw file data (NULL = use filename)
+  size_t raw_buffer_size;          // Size of buffer in bytes
 } dt_image_t;
 
 // should be in datetime.h, workaround to solve cross references

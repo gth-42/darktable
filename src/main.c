@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
   g_setenv("GTK_CSD", "0", TRUE);
 #endif
 
-  if(dt_init(argc, argv, TRUE, TRUE, NULL))
+  if(dt_init(argc, argv, TRUE, TRUE, NULL, NULL)) // NULL applicationdir = auto-detect
   {
     if(dt_gimpmode())
       printf("\n<<<gimp\nerror\ngimp>>>\n");

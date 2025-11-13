@@ -430,7 +430,8 @@ extern darktable_t darktable;
 int dt_init(int argc, char *argv[],
             const gboolean init_gui,
             const gboolean load_data,
-            lua_State *L);
+            lua_State *L,
+            const char *applicationdir);
 
 void dt_get_sysresource_level();
 void dt_cleanup();

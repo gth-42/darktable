@@ -2121,6 +2121,8 @@ void dt_image_init(dt_image_t *img)
   img->loader = LOADER_UNKNOWN;
   img->exif_inited = FALSE;
   img->camera_missing_sample = FALSE;
+  img->raw_buffer = NULL;
+  img->raw_buffer_size = 0;
   dt_datetime_exif_to_img(img, "");
   memset(img->exif_maker, 0, sizeof(img->exif_maker));
   memset(img->exif_model, 0, sizeof(img->exif_model));

@@ -40,21 +40,34 @@ uint8_t dt_loc_init(const char *datadir,
                     const char *localedir,
                     const char *configdir,
                     const char *cachedir,
-                    const char *tmpdir)
+                    const char *tmpdir,
+                    const char *applicationdir)
 {
-  // Assemble pathes
+  // Determine application directory
   char* application_directory = NULL;
-  int dirname_length;
-  // calling wai_getExecutablePath twice as recommended in the docs:
-  // the first call retrieves the length of the path
-  int length = wai_getExecutablePath(NULL, 0, &dirname_length);
-  if(length > 0)
+  gboolean should_free = FALSE;
+
+  if(applicationdir)
   {
-    application_directory = (char*)malloc(length + 1);
-    // the second call retrieves the path including the executable
-    wai_getExecutablePath(application_directory, length, &dirname_length);
-    // strip of the executable name from the path to retrieve the path alone
-    application_directory[dirname_length] = '\0';
+    // Use provided directory - bypass whereami auto-detection
+    application_directory = (char*)applicationdir;
+  }
+  else
+  {
+    // Auto-detect via whereami (existing behavior)
+    int dirname_length;
+    // calling wai_getExecutablePath twice as recommended in the docs:
+    // the first call retrieves the length of the path
+    int length = wai_getExecutablePath(NULL, 0, &dirname_length);
+    if(length > 0)
+    {
+      application_directory = (char*)malloc(length + 1);
+      // the second call retrieves the path including the executable
+      wai_getExecutablePath(application_directory, length, &dirname_length);
+      // strip of the executable name from the path to retrieve the path alone
+      application_directory[dirname_length] = '\0';
+      should_free = TRUE;
+    }
   }
   dt_print(DT_DEBUG_DEV, "application_directory: %s", application_directory);
 
@@ -64,7 +77,7 @@ uint8_t dt_loc_init(const char *datadir,
   dt_loc_init_localedir(application_directory, localedir);
   dt_loc_init_sharedir(application_directory);
 
-  free(application_directory);
+  if(should_free) free(application_directory);
 
   if(!dt_loc_init_user_config_dir(configdir)) return CONFIGDIR_CREATION_FAILED;
   if(!dt_loc_init_user_cache_dir(cachedir)) return CACHEDIR_CREATION_FAILED;
