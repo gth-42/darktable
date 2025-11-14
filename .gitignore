@@ -27,3 +27,7 @@ CMakeLists.txt.user
 workspace/
 cmake-build-debug/
 .idea/
+__pycache__/
+*.so
+*.o
+install/

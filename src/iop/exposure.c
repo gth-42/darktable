@@ -87,6 +87,7 @@ typedef struct dt_iop_exposure_gui_data_t
   GtkLabel *deflicker_used_EC;
   GtkWidget *compensate_exposure_bias;
   GtkWidget *compensate_hilite_preserv;
+  float effective_exposure; // used to cache the final computed exposure
   float deflicker_computed_exposure;
 
   GtkWidget *spot_mode;
@@ -627,6 +628,11 @@ void commit_params(dt_iop_module_t *self,
 
   d->deflicker = 0;
 
+  if (self->gui_data)
+  {
+    ((dt_iop_exposure_gui_data_t *)self->gui_data)->effective_exposure = d->params.exposure;
+  }
+
   if(p->mode == EXPOSURE_MODE_DEFLICKER
      && dt_image_is_raw(&self->dev->image_storage)
      && self->dev->image_storage.buf_dsc.channels == 1
@@ -813,26 +819,43 @@ static float _exposure_proxy_get_black(dt_iop_module_t *self)
   return p->black;
 }
 
+static float _exposure_proxy_get_effective_exposure(dt_iop_module_t *self)
+{
+  const dt_iop_exposure_gui_data_t* const g = self->gui_data;
+  return g->effective_exposure;
+}
 
-static void _exposure_proxy_handle_event(GdkEvent *event, const gboolean blackwhite)
+static void _exposure_proxy_handle_event(gpointer controller,
+                                         int n_press,
+                                         double x,
+                                         const gboolean blackwhite)
 {
   dt_iop_module_t *self = darktable.develop->proxy.exposure.module;
   if(self && self->gui_data)
   {
     static gboolean black = FALSE;
-    if(event->type == GDK_BUTTON_PRESS || event->type == GDK_SCROLL)
+    if((n_press > 0 && GTK_IS_GESTURE_SINGLE(controller)) // button press
+       || !n_press) // scroll event
       black = blackwhite;
 
     if(black)
-      event->button.x *= -1;
+      x *= -1;
 
     const dt_iop_exposure_params_t *p = self->params;
     dt_iop_exposure_gui_data_t *g = self->gui_data;
     GtkWidget *widget = black ? g->black :
                         p->mode == EXPOSURE_MODE_DEFLICKER
-                        ? g->deflicker_target_level : g->exposure;
-    gtk_widget_realize(widget);
-    gtk_widget_event(widget, event);
+                      ? g->deflicker_target_level : g->exposure;
+    if(!n_press)
+      darktable.bauhaus->scroll(widget, controller);
+    else
+      if(GTK_IS_GESTURE_SINGLE(controller))
+        if(n_press > 0)
+          darktable.bauhaus->press(controller, n_press, x, 0, widget);
+        else
+          darktable.bauhaus->release(controller, -n_press, x, 0, widget);
+      else
+        darktable.bauhaus->motion(controller, x, 0, widget);
 
     gchar *text = dt_bauhaus_slider_get_text(widget, dt_bauhaus_slider_get(widget));
     dt_action_widget_toast(DT_ACTION(self), widget, "%s", text);
@@ -1308,6 +1331,7 @@ void gui_init(dt_iop_module_t *self)
   dt_dev_proxy_exposure_t *instance = &darktable.develop->proxy.exposure;
   instance->module = self;
   instance->get_exposure = _exposure_proxy_get_exposure;
+  instance->get_effective_exposure = _exposure_proxy_get_effective_exposure;
   instance->get_black = _exposure_proxy_get_black;
   instance->handle_event = _exposure_proxy_handle_event;
 }

@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2010-2025 darktable developers.
+    Copyright (C) 2025 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -16,32 +16,7 @@
     along with darktable.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "common/profiling.h"
-
-dt_timer_t *dt_timer_start_with_name(const char *file,
-                                     const char *function,
-                                     const char *description)
-{
-  dt_timer_t *t = g_malloc(sizeof(dt_timer_t));
-  t->file = file;
-  t->function = function;
-  t->timer = g_timer_new();
-  t->description = description;
-  return t;
-}
-
-void dt_timer_stop_with_name(dt_timer_t *t)
-{
-  g_assert(t != NULL);
-  g_timer_stop(t->timer);
-  gulong ms = 0;
-  dt_print(DT_DEBUG_PERF,
-           "Timer %s in function %s took %.3f seconds to execute",
-           t->description, t->function,
-           g_timer_elapsed(t->timer, &ms));
-  g_timer_destroy(t->timer);
-  g_free(t);
-}
+void dt_workspace_create(const char *datadir);
 
 // clang-format off
 // modelines: These editor modelines have been set for all relevant files by tools/update_modelines.py

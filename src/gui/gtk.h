@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2009-2024 darktable developers.
+    Copyright (C) 2009-2025 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,8 +28,8 @@ G_BEGIN_DECLS
 
 #define DT_GUI_THUMBSIZE_REDUCE 0.7f
 
-/* helper macro that applies the DPI transformation to fixed pixel values. input should be defaulting to 96
- * DPI */
+/* helper macro that applies the DPI transformation to fixed pixel
+ * values. input should be defaulting to 96 DPI */
 #define DT_PIXEL_APPLY_DPI(value) ((value) * darktable.gui->dpi_factor)
 
 #define DT_RESIZE_HANDLE_SIZE DT_PIXEL_APPLY_DPI(5)
@@ -99,6 +99,14 @@ typedef enum dt_gui_color_t
   DT_GUI_COLOR_COLOR_ASSESSMENT_FG,
   DT_GUI_COLOR_LAST
 } dt_gui_color_t;
+
+typedef enum dt_gui_session_type_t
+{
+  DT_GUI_SESSION_UNKNOWN,
+  DT_GUI_SESSION_X11,
+  DT_GUI_SESSION_QUARTZ,
+  DT_GUI_SESSION_WAYLAND,
+} dt_gui_session_type_t;
 
 typedef struct dt_gui_gtk_t
 {
@@ -444,6 +452,7 @@ char *dt_gui_show_standalone_string_dialog(const char *title,
 
 // returns TRUE if YES was answered, FALSE otherwise
 gboolean dt_gui_show_yes_no_dialog(const char *title,
+                                   const char *wname,
                                    const char *format, ...);
 
 void dt_gui_add_help_link(GtkWidget *widget,
@@ -533,6 +542,37 @@ void dt_gui_hide_collapsible_section(const dt_gui_collapsible_section_t *cs);
 gboolean dt_gui_long_click(const guint second,
                            const guint first);
 
+#define ASSERT_FUNC_TYPE(func, expected_type) (void)(1 ? (func) : (expected_type)0)
+
+GtkGestureSingle *(dt_gui_connect_click)(GtkWidget *widget,
+                                         GCallback pressed,
+                                         GCallback released,
+                                         gpointer data);
+#define dt_gui_connect_click(widget, pressed, released, data) ( \
+  ASSERT_FUNC_TYPE(pressed, void(*)(GtkGestureSingle *, int, double, double, __typeof__(data))), \
+  ASSERT_FUNC_TYPE(released, void(*)(GtkGestureSingle *, int, double, double, __typeof__(data))), \
+  dt_gui_connect_click(GTK_WIDGET(widget), G_CALLBACK(pressed), G_CALLBACK(released), (data)))
+#define dt_gui_connect_click_all(widget, pressed, released, data) \
+  gtk_gesture_single_set_button(dt_gui_connect_click(widget, pressed, released, data), 0)
+
+#define dt_gui_claim(gesture) \
+      gtk_gesture_set_state(GTK_GESTURE(gesture), GTK_EVENT_SEQUENCE_CLAIMED)
+
+GtkEventController *(dt_gui_connect_motion)(GtkWidget *widget,
+                                            GCallback motion,
+                                            GCallback enter,
+                                            GCallback leave,
+                                            gpointer data);
+#define dt_gui_connect_motion(widget, motion, enter, leave, data) ( \
+  ASSERT_FUNC_TYPE(motion, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
+  ASSERT_FUNC_TYPE(enter, void(*)(GtkEventControllerMotion *, double, double, __typeof__(data))), \
+  ASSERT_FUNC_TYPE(leave, void(*)(GtkEventControllerMotion *, __typeof__(data))), \
+  dt_gui_connect_motion(GTK_WIDGET(widget), G_CALLBACK(motion), G_CALLBACK(enter), G_CALLBACK(leave), (data)))
+
+// GTK4 gtk_event_controller_get_current_event_state(GTK_EVENT_CONTROLLER(controller));
+#define dt_modifier_eq(controller, mask)\
+  dt_modifier_is(dt_key_modifier_state(), mask)
+
 // control whether the mouse pointer displays as a "busy" cursor, e.g. watch or timer
 // the calls may be nested, but must be matched
 void dt_gui_cursor_set_busy();
@@ -594,6 +634,9 @@ void dt_gui_commit_on_focus_loss(GtkCellRenderer *renderer, GtkCellEditable **ac
 
 // restore dialog size from config file
 void dt_gui_dialog_restore_size(GtkDialog *dialog, const char *conf);
+
+// returns the session type at runtime
+dt_gui_session_type_t dt_gui_get_session_type(void);
 
 G_END_DECLS
 
